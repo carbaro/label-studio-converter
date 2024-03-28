@@ -1,12 +1,12 @@
 import os
 import re
-import re
 import json  # better to use "imports ujson as json" for the best performance
 import pandas as pd
-from tqdm import tqdm
-
-import uuid
 import logging
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
+logging.basicConfig(level=logging.INFO)
+import uuid
 from pathlib import Path
 
 from PIL import Image
@@ -21,17 +21,20 @@ from label_studio_converter.imports.label_config import generate_label_config
 
 SKW_PICKLES = Path(os.environ['SKW_PICKLES']) if 'SKW_PICKLES' in os.environ else Path(r'F:\AI\SKW\DroneSurveillance\detection_dvc\detect\scores')
 
-logger = logging.getLogger('root')
+logger = logging.getLogger('yolo')
 
 def validate_alternative_image_path(alt_images_directory):
     try:
         is_relative = Path(alt_images_directory).relative_to(LOCAL_FILES_DOCUMENT_ROOT)
         if is_relative:
-            logger.info(f"The alternative directory is valid. It is relative to {LOCAL_FILES_DOCUMENT_ROOT}")
+            with logging_redirect_tqdm():
+                logger.info(f"The alternative directory is valid. It is relative to {LOCAL_FILES_DOCUMENT_ROOT}")
         else:
-            logger.error(f"The alternative directory {alt_images_directory} must start with LOCAL_FILES_DOCUMENT_ROOT={LOCAL_FILES_DOCUMENT_ROOT} and must be a child, e.g.: {Path(LOCAL_FILES_DOCUMENT_ROOT) / 'project_images'}")
+            with logging_redirect_tqdm():
+                logger.error(f"The alternative directory {alt_images_directory} must start with LOCAL_FILES_DOCUMENT_ROOT={LOCAL_FILES_DOCUMENT_ROOT} and must be a child, e.g.: {Path(LOCAL_FILES_DOCUMENT_ROOT) / 'project_images'}")
     except Exception as e:
-        logger.error(f"The alternative directory {alt_images_directory} must start with LOCAL_FILES_DOCUMENT_ROOT={LOCAL_FILES_DOCUMENT_ROOT} and must be a child, e.g.: {Path(LOCAL_FILES_DOCUMENT_ROOT) / 'project_images'}")
+        with logging_redirect_tqdm():
+                logger.error(f"The alternative directory {alt_images_directory} must start with LOCAL_FILES_DOCUMENT_ROOT={LOCAL_FILES_DOCUMENT_ROOT} and must be a child, e.g.: {Path(LOCAL_FILES_DOCUMENT_ROOT) / 'project_images'}")
 
 
 def convert_yolo_to_ls(
@@ -45,7 +48,6 @@ def convert_yolo_to_ls(
     image_ext='.jpg,.jpeg,.png',
     image_dims: Optional[Tuple[int, int]] = None,
     DJI=True,
-    full_imgID = False
     full_imgID = False
 ):
     """Convert YOLO labeling to Label Studio JSON
@@ -65,7 +67,8 @@ def convert_yolo_to_ls(
     validate_alternative_image_path(alt_imgs_dir)
     
     tasks = []
-    logger.info('Reading YOLO notes and categories from %s', input_dir)
+    with logging_redirect_tqdm():
+        logger.info('Reading YOLO notes and categories from %s', input_dir)
 
 
     # build categories=>labels dict
@@ -73,7 +76,8 @@ def convert_yolo_to_ls(
     with open(notes_file) as f:
         lines = [line.strip() for line in f.readlines()]
     categories = {i: line for i, line in enumerate(lines)}
-    logger.info(f'Found {len(categories)} categories')
+    with logging_redirect_tqdm():
+        logger.info(f'Found {len(categories)} categories')
 
     # generate and save labeling config
     label_config_file = out_file.replace('.json', '') + '.label_config.xml'
@@ -91,16 +95,20 @@ def convert_yolo_to_ls(
     get_int = lambda s: int(re.search('\d{4}\.',s)[0][:4]) if re.search('\d{4}\.',s) is not None else Path(s).stem# s[19:23])
     get_int = lambda s: int(re.search('\d{4}\.',s)[0][:4]) if re.search('\d{4}\.',s) is not None else Path(s).stem# s[19:23])
 
-    logger.info('Converting labels from %s', labels_dir)
+    with logging_redirect_tqdm():
+        logger.info('Converting labels from %s', labels_dir)
 
     # build array out of provided comma separated image_extns (str -> array)
     image_ext = [x.strip() for x in image_ext.split(",")]
-    logger.info(f'image extensions->, {image_ext}')
+    with logging_redirect_tqdm():
+        logger.info(f'image extensions->, {image_ext}')
 
     img_count = sum(len([file for file in files if file.endswith('.JPG')]) for _, _, files in os.walk(images_dir))  # Get the number of files
 
     with tqdm(total=img_count) as pbar:
     # loop through images
+        with logging_redirect_tqdm():
+            logger.info('scanning images at %s', images_dir)
         for root, dirs, files in os.walk(images_dir):
             if is_DJI and len(files):
                 property = Path(alt_imgs_dir).stem
@@ -109,12 +117,14 @@ def convert_yolo_to_ls(
                         property_pickle_fn = pickle_fn
                         break
                 df = pd.read_pickle(SKW_PICKLES / property_pickle_fn)
-                logger.info(f'Loading pickled DF {property_pickle_fn}')
+                with logging_redirect_tqdm():
+                    logger.info(f'Loading pickled DF {property_pickle_fn}')
                 index_names = ['Paddock','FlightID','droneID']
                 if df.index.names != index_names:
                     df.set_index(index_names, inplace=True)
                 df_idx = df.index
-                logger.info(f'loaded {property_pickle_fn} with {df.shape[0]} records. Query it by {df.index.names}. e.g. {df.index[0]}')
+                with logging_redirect_tqdm():
+                    logger.info(f'loaded {property_pickle_fn} with {df.shape[0]} records. Query it by {df.index.names}. e.g. {df.index[0]}')
                 
             for f in files:
                 pbar.update(1)
@@ -158,11 +168,17 @@ def convert_yolo_to_ls(
                     task['data']['paddock'] = paddock
                     task['data']['flight'] = flight
                     pic_midx = (paddock,flight,img_id)
-                    # logger.info(f'looking for {pic_midx} in {df_idx}')
+                    # with logging_redirect_tqdm():
+                    with logging_redirect_tqdm():
+                        logger.info(f'looking for {pic_midx} in {df_idx}')
                     if (paddock is None or flight is None) and img_id in df_idx.unique(level='droneID'):
-                        # logger.info(f'looking for [:,:,{img_id}] in {df_idx}')
+                        # with logging_redirect_tqdm():
+                        with logging_redirect_tqdm():
+                            logger.info(f'looking for [:,:,{img_id}] in {df_idx}')
                         pic_df = df.loc[:,:,img_id]
-                        # logger.info(f'found {pic_df}')
+                        # with logging_redirect_tqdm():
+                        with logging_redirect_tqdm():
+                            logger.info(f'found {pic_df}')
                         task['data']['max'] = pic_df['max'].tolist()[0] # if loading summary per pic
                     elif pic_midx in df_idx:# Detection data
                         pic_df = df.loc[pic_midx]
@@ -229,7 +245,8 @@ def convert_yolo_to_ls(
                 tasks.append(task)
 
     if len(tasks) > 0:
-        logger.info('Saving Label Studio JSON to %s', out_file)
+        with logging_redirect_tqdm():
+            logger.info('Saving Label Studio JSON to %s', out_file)
         with open(out_file, 'w') as out:
             json.dump(tasks, out)
 
@@ -242,7 +259,8 @@ def convert_yolo_to_ls(
             f'  4. Import "{out_file}" to the project\n'
         )
     else:
-        logger.error('No labels converted')
+        with logging_redirect_tqdm():
+            logger.error('No labels converted')
 
 
 def add_parser(subparsers):
