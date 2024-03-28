@@ -1,4 +1,5 @@
 import os
+import re
 import json  # better to use "imports ujson as json" for the best performance
 import pandas as pd
 from tqdm import tqdm
@@ -43,6 +44,7 @@ def convert_yolo_to_ls(
     image_ext='.jpg,.jpeg,.png',
     image_dims: Optional[Tuple[int, int]] = None,
     DJI=True,
+    full_imgID = False
 ):
     """Convert YOLO labeling to Label Studio JSON
     :param input_dir: directory with YOLO where images, labels, notes.json are located
@@ -84,6 +86,7 @@ def convert_yolo_to_ls(
     # define directories
     labels_dir = os.path.join(input_dir, 'labels') if not has_alt_imgs_dir else input_dir
     images_dir = os.path.join(input_dir, 'images') if not has_alt_imgs_dir else alt_imgs_dir
+    get_int = lambda s: int(re.search('\d{4}\.',s)[0][:4]) if re.search('\d{4}\.',s) is not None else Path(s).stem# s[19:23])
 
     logger.info('Converting labels from %s', labels_dir)
 
@@ -144,7 +147,8 @@ def convert_yolo_to_ls(
                         property, paddock, flight = relative_root_pth.parts[-3:]
                         flight = flight[-3:]
                     try:
-                        img_id = int(Path(image_filename).stem.split('_')[2])
+                        # img_id = int(Path(image_filename).stem.split('_')[2])
+                        img_id = image_file_base if full_imgID else get_int(image_filename)
                     except:
                         print(f'img filename: {image_filename}')
                     task['data']['property'] = property
@@ -308,4 +312,10 @@ def add_parser(subparsers):
             "if all your images are of dimensions width=600, height=800"
         ),
         default=None,
+    )
+    yolo.add_argument(
+        '--full-imgID',
+        dest='full_imgID',
+        type=bool,
+        default=False
     )
