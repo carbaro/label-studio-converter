@@ -168,6 +168,7 @@ def imports(args):
             out_type=args.out_type,
             image_root_url=args.image_root_url,
             image_ext=args.image_ext,
+            full_imgID=args.full_imgID,
         )
 
     elif args.import_format == 'coco':
