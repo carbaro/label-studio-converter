@@ -49,6 +49,7 @@ def convert_yolo_to_ls(
     image_dims: Optional[Tuple[int, int]] = None,
     DJI = True,
     full_imgID = False,
+    pickled_fn=None
 ):
     """Convert YOLO labeling to Label Studio JSON
     :param input_dir: directory with YOLO where images, labels, notes.json are located
@@ -62,6 +63,7 @@ def convert_yolo_to_ls(
     :param image_dims: image dimensions - optional tuple of integers specifying the image width and height of *all* images in the dataset. Defaults to opening the image to determine it's width and height, which is slower. This should only be used in the special case where you dataset has uniform image dimesions.
     :param DJI:
     :param full_imgID:
+    :param pickled_fn: 
     """
 
     is_DJI = DJI
@@ -111,10 +113,15 @@ def convert_yolo_to_ls(
     img_count = sum(len([file for file in files if file.endswith('.JPG')]) for _, _, files in os.walk(images_dir))  # Get the number of files
 
     property = Path(alt_imgs_dir).stem
-    for pickle_fn in [f for f in os.listdir(SKW_PICKLES) if f.endswith('.pkl')]: # TODO: move out of walk. Grab property from alt_imgs_dir
-        if property in pickle_fn and 'all' in pickle_fn:
-            property_pickle_fn = pickle_fn
-            break
+    pickles = [f for f in os.listdir(SKW_PICKLES) if f.endswith('.pkl')]
+    if pickled_fn is None:
+        for pickle_fn in pickles: 
+            if property in pickle_fn and 'all' in pickle_fn:
+                property_pickle_fn = pickle_fn
+                break
+    else:
+        if pickled_fn in pickles:
+            property_pickle_fn = pickles[pickles.index(pickled_fn)]
     if is_DJI: # TODO: files -> images = [file if file.endswith('.JPG)]
         df = pd.read_pickle(SKW_PICKLES / property_pickle_fn)
         with logging_redirect_tqdm():
@@ -362,4 +369,10 @@ def add_parser(subparsers):
         dest='full_imgID',
         type=bool,
         default=False
+    )
+    yolo.add_argument(
+        '--pickled-fn',
+        dest='pickled_fn',
+        type=str,
+        default=None
     )
