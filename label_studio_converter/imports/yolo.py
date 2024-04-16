@@ -99,8 +99,8 @@ def convert_yolo_to_ls(
     # define directories
     labels_dir = os.path.join(input_dir, 'labels') if not has_alt_imgs_dir else input_dir
     images_dir = os.path.join(input_dir, 'images') if not has_alt_imgs_dir else alt_imgs_dir
-    get_int = lambda s: int(re.search('\d{4}\.',s)[0][:4]) if re.search('\d{4}\.',s) is not None else Path(s).stem# s[19:23])
-    get_int = lambda s: int(re.search('\d{4}\.',s)[0][:4]) if re.search('\d{4}\.',s) is not None else Path(s).stem# s[19:23])
+    get_int = lambda s: int(re.search(r'\d{4}\.',s)[0][:4]) if re.search(r'\d{4}\.',s) is not None else Path(s).stem# s[19:23])
+    get_int = lambda s: int(re.search(r'\d{4}\.',s)[0][:4]) if re.search(r'\d{4}\.',s) is not None else Path(s).stem# s[19:23])
 
     with logging_redirect_tqdm():
         logger.info('Converting labels from %s', labels_dir)
@@ -115,11 +115,13 @@ def convert_yolo_to_ls(
     property = Path(alt_imgs_dir).stem
     pickles = [f for f in os.listdir(SKW_PICKLES) if f.endswith('.pkl')]
     if pickled_fn is None:
+        print(f'Pickle filename not provided. Selecting first instance in list')
         for pickle_fn in pickles: 
             if property in pickle_fn and 'all' in pickle_fn:
                 property_pickle_fn = pickle_fn
                 break
     else:
+        print(f'Pickle filename provided. Searching for match in list')
         if pickled_fn in pickles:
             property_pickle_fn = pickles[pickles.index(pickled_fn)]
     if is_DJI: # TODO: files -> images = [file if file.endswith('.JPG)]
