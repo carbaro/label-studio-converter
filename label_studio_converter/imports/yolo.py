@@ -124,6 +124,8 @@ def convert_yolo_to_ls(
         print(f'Pickle filename provided. Searching for match in list')
         if pickled_fn in pickles:
             property_pickle_fn = pickles[pickles.index(pickled_fn)]
+        else:
+            print(f'can\'t find pickle {pickled_fn} in {SKW_PICKLES}')
     if is_DJI: # TODO: files -> images = [file if file.endswith('.JPG)]
         df = pd.read_pickle(SKW_PICKLES / property_pickle_fn)
         with logging_redirect_tqdm():
@@ -187,7 +189,7 @@ def convert_yolo_to_ls(
                         property, paddock, flight, *_ = list(relative_root_pth.parts) + [None,None]
                     else:
                         property, paddock, flight = relative_root_pth.parts[-3:]
-                        flight = flight[-3:]
+                        flight = flight[-3:] if all(c.isdigit() for c in flight[-3:]) else flight
                     # try:
                         # img_id = int(Path(image_filename).stem.split('_')[2])
                     img_id = image_file_base if full_imgID else get_int(image_filename)
