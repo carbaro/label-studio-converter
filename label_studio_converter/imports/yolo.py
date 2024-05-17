@@ -199,27 +199,30 @@ def convert_yolo_to_ls(
                     task['data']['paddock'] = paddock
                     task['data']['flight'] = flight
                     pic_midx = (paddock,flight,img_id)
-                    # with logging_redirect_tqdm():
-                    if pic_midx in df_idx:# Detection data
+                    if full_imgID and (pic_midx in df_idx):# Detection data
                         # with logging_redirect_tqdm():
-                        #     logger.info(f'looking for {pic_midx} in {df_idx}')
+                            # logger.info(f'looking for {pic_midx} in {df_idx}')
                         pic_df = df.loc[pic_midx]
                         # task['data']['max'] = pic_df['c'].max() # if loading all dets
                         task['data']['max'] = pic_df['max'] # if loading summary per pic
                         # task['data']['max'] = pic_df['mean'] # if loading summary per pic
                         # task['data']['max'] = pic_df['count'] # if loading summary per pic
-                    elif full_imgID and img_id in df_idx.unique(level='droneID'): #(paddock is None or flight is None) and img_id in df_idx.unique(level='droneID'):
-                        # with logging_redirect_tqdm():
-                        # with logging_redirect_tqdm():
-                        #     logger.info(f'looking for [:,:,{img_id}]')# in {df_idx}')
-                        pic_df = df.loc[:,:,img_id]
-                        # with logging_redirect_tqdm():
-                        # with logging_redirect_tqdm():
-                        #     logger.info(f'found {pic_df}')
-                        task['data']['max'] = pic_df['max'].tolist()[0] # if loading summary per pic
                     else:
-                        # logger.info(f'{img_id} could not be retrieved')# from {df}')
-                        pass
+                        # with logging_redirect_tqdm():
+                            # logger.info(f'{pic_midx} not found in {df_idx}')
+                        is_unique_id = df_idx.get_level_values('droneID').to_series().is_unique
+                        if full_imgID and is_unique_id:#img_id in df_idx.unique(level='droneID'): #(paddock is None or flight is None) and img_id in df_idx.unique(level='droneID'):
+                            # with logging_redirect_tqdm():
+                            # with logging_redirect_tqdm():
+                            #     logger.info(f'looking for [:,:,{img_id}]')# in {df_idx}')
+                            pic_df = df.loc[:,:,img_id]
+                            # with logging_redirect_tqdm():
+                            # with logging_redirect_tqdm():
+                            #     logger.info(f'found {pic_df}')
+                            task['data']['max'] = pic_df['max'].tolist()[0] # if loading summary per pic
+                        else:
+                            # logger.info(f'{img_id} could not be retrieved')# from {df}')
+                            pass
 
                 # define coresponding label file and check existence
                 label_file = os.path.join(labels_dir, image_file_base + '.txt') if not has_alt_imgs_dir else os.path.join(root.replace(images_dir,labels_dir), 'labels', image_file_base + '.txt')
