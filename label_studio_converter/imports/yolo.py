@@ -23,7 +23,8 @@ def convert_yolo_to_ls(
     from_name='label',
     out_type="annotations",
     image_root_url='/data/local-files/?d=',
-    image_ext='.jpg,.jpeg,.png',
+    image_ext='.jpg,.jpeg,.png,.JPG',
+    model_v='undefined',
     image_dims: Optional[Tuple[int, int]] = None,
 ):
     """Convert YOLO labeling to Label Studio JSON
@@ -34,6 +35,7 @@ def convert_yolo_to_ls(
     :param out_type: annotation type - "annotations" or "predictions"
     :param image_root_url: root URL path where images will be hosted, e.g.: http://example.com/images
     :param image_ext: image extension/s - single string or comma separated list to search, eg. .jpeg or .jpg, .png and so on.
+    :param model_v: model version - optional identifier for model version if importing predictions.
     :param image_dims: image dimensions - optional tuple of integers specifying the image width and height of *all* images in the dataset. Defaults to opening the image to determine it's width and height, which is slower. This should only be used in the special case where you dataset has uniform image dimesions.
     """
 
@@ -98,6 +100,9 @@ def convert_yolo_to_ls(
                     "ground_truth": False,
                 }
             ]
+
+            if out_type == 'predictions' and model_v != 'undefined':
+                task[out_type][0]['model_version'] = model_v
 
             # read image sizes
             if image_dims is None:
@@ -208,6 +213,12 @@ def add_parser(subparsers):
         dest='image_ext',
         help='image extension to search: .jpeg or .jpg, .png',
         default='.jpg',
+    )
+    yolo.add_argument(
+        '--model-v',
+        dest='model_v',
+        help='optional argument to determine model version if importing predictions. default: undefined',
+        default='undefined',
     )
     yolo.add_argument(
         '--image-dims',
